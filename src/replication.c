@@ -782,7 +782,7 @@ out:
 static void sendAppendEntriesResultCb(struct raft_io_send *req, int status)
 {
     (void)status;
-    HeapFree(req);
+    heapFree(req);
 }
 
 static void sendAppendEntriesResult(

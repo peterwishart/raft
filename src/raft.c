@@ -37,7 +37,7 @@ int raft_init(struct raft *r,
     r->tracer = &NoopTracer;
     r->id = id;
     /* Make a copy of the address */
-    r->address = HeapMalloc(strlen(address) + 1);
+    r->address = heapMalloc(strlen(address) + 1);
     if (r->address == NULL) {
         rv = RAFT_NOMEM;
         goto err;
@@ -73,7 +73,7 @@ int raft_init(struct raft *r,
     return 0;
 
 err_after_address_alloc:
-    HeapFree(r->address);
+    heapFree(r->address);
 err:
     assert(rv != 0);
     return rv;
