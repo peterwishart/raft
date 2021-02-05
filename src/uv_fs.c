@@ -392,7 +392,7 @@ int UvFsReadFile(const char *dir,
     }
 
     buf->len = (size_t)sb.st_size;
-    buf->base = HeapMalloc(buf->len);
+    buf->base = heapMalloc(buf->len);
     if (buf->base == NULL) {
         ErrMsgOom(errmsg);
         rv = RAFT_NOMEM;
@@ -409,7 +409,7 @@ int UvFsReadFile(const char *dir,
     return 0;
 
 err_after_buf_alloc:
-    HeapFree(buf->base);
+    heapFree(buf->base);
 err_after_open:
     UvOsClose(fd);
 err:

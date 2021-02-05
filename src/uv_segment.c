@@ -171,7 +171,7 @@ static int uvReadSegmentFile(struct uv *uv,
     }
     if (buf->len < 8) {
         ErrMsgPrintf(uv->io->errmsg, "file has only %zu bytes", buf->len);
-        HeapFree(buf->base);
+        heapFree(buf->base);
         return RAFT_IOERR;
     }
     *format = byteFlip64(*(uint64_t *)buf->base);
@@ -323,7 +323,7 @@ static int uvLoadEntriesBatch(struct uv *uv,
     return 0;
 
 err_after_header_decode:
-    HeapFree(*entries);
+    heapFree(*entries);
 err:
     *entries = NULL;
     *n_entries = 0;
@@ -438,11 +438,11 @@ err_after_batch_load:
 
 err_after_extend_entries:
     if (*entries != NULL) {
-        HeapFree(*entries);
+        heapFree(*entries);
     }
 
 err_after_read:
-    HeapFree(buf.base);
+    heapFree(buf.base);
 
 err:
     assert(rv != 0);
@@ -520,7 +520,7 @@ static int uvLoadOpenSegment(struct uv *uv,
                  * segment. */
                 tracef("remove zeroed open segment %s", info->filename);
                 remove = true;
-                HeapFree(buf.base);
+                heapFree(buf.base);
                 goto done;
             }
         }
@@ -571,7 +571,7 @@ static int uvLoadOpenSegment(struct uv *uv,
     }
 
     if (n_batches == 0) {
-        HeapFree(buf.base);
+        heapFree(buf.base);
         remove = true;
     }
 
@@ -616,7 +616,7 @@ err_after_batch_load:
     raft_free(tmp_entries);
 
 err_after_read:
-    HeapFree(buf.base);
+    heapFree(buf.base);
 
 err:
     assert(rv != 0);

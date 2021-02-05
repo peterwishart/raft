@@ -74,7 +74,7 @@ static void uvAliveSegmentWriterCloseCb(struct UvWriter *writer)
     struct uvAliveSegment *segment = writer->data;
     struct uv *uv = segment->uv;
     uvSegmentBufferClose(&segment->pending);
-    HeapFree(segment);
+    heapFree(segment);
     uvMaybeFireCloseCb(uv);
 }
 
@@ -120,7 +120,7 @@ static void uvAppendFinishRequestsInQueue(struct uv *uv, queue *q, int status)
         append = QUEUE_DATA(head, struct uvAppend, queue);
         QUEUE_REMOVE(head);
         req = append->req;
-        HeapFree(append);
+        heapFree(append);
         req->cb(req, status);
     }
 }
@@ -422,7 +422,7 @@ static void uvAliveSegmentPrepareCb(struct uvPrepare *req, int status)
         QUEUE_REMOVE(&segment->queue);
         assert(status == RAFT_CANCELED); /* UvPrepare cancels pending reqs */
         uvSegmentBufferClose(&segment->pending);
-        HeapFree(segment);
+        heapFree(segment);
         return;
     }
 
@@ -452,7 +452,7 @@ static void uvAliveSegmentPrepareCb(struct uvPrepare *req, int status)
 
 err:
     QUEUE_REMOVE(&segment->queue);
-    HeapFree(segment);
+    heapFree(segment);
     uv->errored = true;
     uvAppendFinishPendingRequests(uv, rv);
 }
@@ -486,7 +486,7 @@ static int uvAppendPushAliveSegment(struct uv *uv)
     uvCounter counter;
     int rv;
 
-    segment = HeapMalloc(sizeof *segment);
+    segment = heapMalloc(sizeof *segment);
     if (segment == NULL) {
         rv = RAFT_NOMEM;
         goto err;
@@ -516,7 +516,7 @@ err_after_prepare:
     UvFinalize(uv, counter, 0, 0, 0);
 err_after_alloc:
     QUEUE_REMOVE(&segment->queue);
-    HeapFree(segment);
+    heapFree(segment);
 err:
     assert(rv != 0);
     return rv;
@@ -626,7 +626,7 @@ int UvAppend(struct raft_io *io,
     uv = io->impl;
     assert(!uv->closing);
 
-    append = HeapMalloc(sizeof *append);
+    append = heapMalloc(sizeof *append);
     if (append == NULL) {
         rv = RAFT_NOMEM;
         goto err;
@@ -653,7 +653,7 @@ int UvAppend(struct raft_io *io,
     return 0;
 
 err_after_req_alloc:
-    HeapFree(append);
+    heapFree(append);
 err:
     assert(rv != 0);
     return rv;
