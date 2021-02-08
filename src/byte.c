@@ -99,7 +99,8 @@ A million repetitions of "a"
 
 #if defined(vax) || defined(ns32000) || defined(sun386) ||      \
     defined(__i386__) || defined(MIPSEL) || defined(_MIPSEL) || \
-    defined(BIT_ZERO_ON_RIGHT) || defined(__alpha__) || defined(__alpha)
+    defined(BIT_ZERO_ON_RIGHT) || defined(__alpha__) || defined(__alpha) || \
+    defined(_M_X64) || defined(_M_IX86) || defined(_M_ARM)
 #define BYTE_ORDER LITTLE_ENDIAN
 #endif
 

@@ -5,7 +5,9 @@
 
 #include <stdint.h>
 #include <string.h>
+#if defined(linux) || defined(__linux__)
 #include <unistd.h>
+#endif
 
 #if defined(__cplusplus)
 #define BYTE__INLINE inline
@@ -19,7 +21,8 @@
 
 /* Compile-time endianess detection (best effort). */
 #if (defined(__BYTE_ORDER) && (__BYTE_ORDER == __LITTLE_ENDIAN)) || \
-    (defined(__ARMEL__) && (__ARMEL__ == 1))
+    (defined(__ARMEL__) && (__ARMEL__ == 1)) || \
+    defined(_M_X64) || defined(_M_IX86) || defined(_M_ARM)
 #define BYTE__LITTLE_ENDIAN
 #elif defined(__BYTE_ORDER) && (__BYTE_ORDER == __BIG_ENDIAN) && \
     defined(__GNUC__) && __GNUC__ >= 4 && __GNUC_MINOR__ >= 8
