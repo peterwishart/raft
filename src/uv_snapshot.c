@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(linux) || defined(__linux__)
 #include <sys/uio.h>
+#endif
 
 #include "array.h"
 #include "assert.h"

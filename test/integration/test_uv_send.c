@@ -1,4 +1,6 @@
+#if defined(linux) || defined(__linux__)
 #include <unistd.h>
+#endif
 
 #include "../lib/runner.h"
 #include "../lib/tcp.h"
@@ -304,7 +306,9 @@ TEST(send, reconnectAfterMultipleWriteErrors, setUp, tearDown, 0, NULL)
 {
     struct fixture *f = data;
     int socket;
+#if defined(linux) || defined(__linux__)
     signal(SIGPIPE, SIG_IGN);
+#endif
     SEND(0);
     socket = TcpServerAccept(&f->server);
     close(socket);

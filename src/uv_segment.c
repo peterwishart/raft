@@ -2,7 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(linux) || defined(__linux__)
 #include <unistd.h>
+#endif
 
 #include "array.h"
 #include "assert.h"

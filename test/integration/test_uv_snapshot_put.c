@@ -1,4 +1,6 @@
+#if defined(linux) || defined(__linux__)
 #include <unistd.h>
+#endif
 
 #include "append_helpers.h"
 #include "../lib/runner.h"

@@ -1,5 +1,8 @@
 #include <string.h>
+
+#if defined(linux) || defined(__linux__)
 #include <unistd.h>
+#endif
 
 #include "assert.h"
 #include "byte.h"

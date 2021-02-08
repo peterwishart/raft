@@ -1,9 +1,13 @@
 #include "tcp.h"
 
+#if defined(linux) || defined(__linux__)
 #include <arpa/inet.h>
+#include <unistd.h>
+#else
+#include <ws2tcpip.h>
+#endif
 #include <errno.h>
 #include <stdio.h>
-#include <unistd.h>
 
 void TcpServerInit(struct TcpServer *s)
 {
