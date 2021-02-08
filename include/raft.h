@@ -6,7 +6,20 @@
 #include <stddef.h>
 #include <stdio.h>
 
+
+#ifdef _MSC_VER
+#    ifdef RAFT_STATIC
+#        define RAFT_API 
+#    else  /* RAFT_STATIC */
+#        ifdef RAFT_SHARED_BUILD
+#            define RAFT_API __declspec(dllexport)
+#        else  /* RAFT_SHARED_BUILD */
+#            define RAFT_API __declspec(dllimport)
+#        endif /* RAFT_SHARED_BUILD */
+#    endif  /* RAFT_STATIC */
+#else    /* _MSC_VER */
 #define RAFT_API __attribute__((visibility("default")))
+#endif /* _MSC_VER */
 
 /**
  * Error codes.
@@ -67,8 +80,16 @@ typedef unsigned long long raft_time;
  */
 struct raft_buffer
 {
+    // this struct seems to be based on uv_buf_t, which in turn is based on WSABUF on win32 and iovec on unix.    
+    // however just typedef-ing it couples more code to uv 
+    // todo: is running without uv on windows affected by the same issue?
+    #ifdef _WIN32
+    unsigned long len;
+    char *base;
+    #else
     void *base; /* Pointer to the buffer data. */
     size_t len; /* Length of the buffer. */
+    #endif
 };
 
 /**
