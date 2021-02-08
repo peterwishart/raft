@@ -158,8 +158,12 @@ static int createTempFile(const char *dir, int size, char **path, int *fd)
 /* Allocate a buffer of the given size. */
 static void allocBuffer(struct iovec *iov, int size)
 {
-    iov->iov_len = size;
+    iov->iov_len = size;    
+#ifdef WIN32
+    iov->iov_base = _aligned_malloc(iov->iov_len, iov->iov_len);
+#else
     iov->iov_base = aligned_alloc(iov->iov_len, iov->iov_len);
+#endif
     assert(iov->iov_base != NULL);
 }
 
@@ -198,7 +202,11 @@ static int detectSuitableBlockSizesForDirectIO(const char *dir,
         struct iovec iov;
         allocBuffer(&iov, size);
         rv = pwritev2(fd, &iov, 1, 0, RWF_DSYNC | RWF_HIPRI);
+        #ifdef WIN32
+        _aligned_free(iov.iov_base)
+        #else
         free(iov.iov_base);
+        #endif
         if (rv == -1) {
             assert(errno == EINVAL);
             continue; /* Try with a bigger buffer size */

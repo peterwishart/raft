@@ -81,6 +81,20 @@ static void submitCbAssertResult(struct UvWriterReq *req, int status)
     CLOSE_SUBMIT; \
     CLOSE_WAIT
 
+#ifdef _WIN32
+#define MAKE_BUFS(BUFS, N_BUFS, CONTENT)                               \
+    {                                                                  \
+        int __i;                                                       \
+        BUFS = munit_malloc(sizeof *BUFS * N_BUFS);                    \
+        for (__i = 0; __i < N_BUFS; __i++) {                           \
+            uv_buf_t *__buf = &BUFS[__i];                              \
+            __buf->len = f->block_size;                                \
+            __buf->base = _aligned_malloc(f->block_size, f->block_size); \
+            munit_assert_ptr_not_null(__buf->base);                    \
+            memset(__buf->base, CONTENT + __i, __buf->len);            \
+        }                                                              \
+    }
+#else
 #define MAKE_BUFS(BUFS, N_BUFS, CONTENT)                               \
     {                                                                  \
         int __i;                                                       \
@@ -93,7 +107,18 @@ static void submitCbAssertResult(struct UvWriterReq *req, int status)
             memset(__buf->base, CONTENT + __i, __buf->len);            \
         }                                                              \
     }
+#endif
 
+#ifdef _WIN32
+#define DESTROY_BUFS(BUFS, N_BUFS)           \
+    {                                        \
+        int __i;                             \
+        for (__i = 0; __i < N_BUFS; __i++) { \
+            _aligned_free(BUFS[__i].base);   \
+        }                                    \
+        free(BUFS);                          \
+    }
+#else
 #define DESTROY_BUFS(BUFS, N_BUFS)           \
     {                                        \
         int __i;                             \
@@ -102,6 +127,7 @@ static void submitCbAssertResult(struct UvWriterReq *req, int status)
         }                                    \
         free(BUFS);                          \
     }
+#endif
 
 #define WRITE_REQ(N_BUFS, CONTENT, OFFSET, RV, STATUS)             \
     struct uv_buf_t *_bufs;                                        \

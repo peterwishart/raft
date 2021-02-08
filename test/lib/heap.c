@@ -82,7 +82,11 @@ static void *heapAlignedAlloc(void *data, size_t alignment, size_t size)
 
     h->n++;
 
+#ifdef _WIN32
+    p = _aligned_malloc(alignment, size);
+#else
     p = aligned_alloc(alignment, size);
+#endif
     munit_assert_ptr_not_null(p);
 
     h->alignment = alignment;
@@ -94,7 +98,12 @@ static void heapAlignedFree(void *data, size_t alignment, void *ptr)
 {
     struct heap *h = data;
     munit_assert_int(alignment, ==, h->alignment);
+#ifdef _WIN32
+    h->n--;
+    _aligned_free(ptr);
+#else
     heapFree(data, ptr);
+#endif
 }
 
 static int getIntParam(const MunitParameter params[], const char *name)
