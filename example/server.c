@@ -6,6 +6,14 @@
 #include "../include/raft.h"
 #include "../include/raft/uv.h"
 
+#ifdef _WIN32
+#include <time.h>
+#include <windows.h>
+#  if !defined(srandom)
+#  define srandom srand
+#  endif
+#endif /* _WIN32 */
+
 #define N_SERVERS 3    /* Number of servers in the example cluster */
 #define APPLY_RATE 125 /* Apply a new entry every 125 milliseconds */
 
@@ -386,7 +394,9 @@ int main(int argc, char *argv[])
     id = (unsigned)atoi(argv[2]);
 
     /* Ignore SIGPIPE, see https://github.com/joyent/libuv/issues/1254 */
+    #if defined(SIGPIPE)
     signal(SIGPIPE, SIG_IGN);
+    #endif
 
     /* Initialize the libuv loop. */
     rv = uv_loop_init(&loop);
