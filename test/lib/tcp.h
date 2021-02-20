@@ -105,4 +105,7 @@ int test_tcp_accept(struct test_tcp *t);
  */
 void test_tcp_stop(struct test_tcp *t);
 
+int sockClose(int socket);
+int sockWrite(int socket, void *buf, int len);
+
 #endif /* TEST_TCP_H */

@@ -1,10 +1,15 @@
 #include "aio.h"
 
 #include <fcntl.h>
-#include <sys/syscall.h>
+
+#if defined(linux) || defined(__linux__)
 #include <unistd.h>
+#include <sys/syscall.h>
+#endif
 
 #include "munit.h"
+
+#ifndef _WIN32
 
 int AioFill(aio_context_t *ctx, unsigned n)
 {
@@ -56,3 +61,5 @@ void AioDestroy(aio_context_t ctx)
     rv = syscall(__NR_io_destroy, ctx);
     munit_assert_int(rv, ==, 0);
 }
+
+#endif  // !_WIN32

@@ -2,6 +2,8 @@
 #ifndef TEST_AIO_H
 #define TEST_AIO_H
 
+#ifndef _WIN32
+
 #include <linux/aio_abi.h>
 
 /* Fill the AIO subsystem resources by allocating a lot of events to the given
@@ -17,3 +19,5 @@ int AioFill(aio_context_t *ctx, unsigned n);
 void AioDestroy(aio_context_t ctx);
 
 #endif /* TEST_AIO_H */
+
+#endif  // !_WIN32

@@ -5,9 +5,26 @@
 #include <unistd.h>
 #else
 #include <ws2tcpip.h>
+#include <winsock2.h>
 #endif
 #include <errno.h>
 #include <stdio.h>
+
+int sockClose(int socket) {
+#ifdef _WIN32
+    return closesocket(socket);
+#else
+    return close(socket);
+#endif
+}
+
+int sockWrite(int socket, void* buf, int len) {
+#ifdef _WIN32
+    return send(socket, buf, len, 0);
+#else
+    return write(socket, buf, len);
+#endif
+}
 
 void TcpServerInit(struct TcpServer *s)
 {
@@ -58,7 +75,7 @@ void TcpServerClose(struct TcpServer *s)
         return;
     }
 
-    rv = close(s->socket);
+    rv = sockClose(s->socket);
     if (rv == -1) {
         munit_errorf("tcp server: close(): %s", strerror(errno));
     }
@@ -84,7 +101,7 @@ void TcpServerStop(struct TcpServer *s)
 {
     int rv;
 
-    rv = close(s->socket);
+    rv = sockClose(s->socket);
     if (rv == -1) {
         munit_errorf("tcp server: close(): %s", strerror(errno));
     }
@@ -103,14 +120,14 @@ void test_tcp_tear_down(struct test_tcp *t)
     int rv;
 
     if (t->server.socket != -1) {
-        rv = close(t->server.socket);
+        rv = sockClose(t->server.socket);
         if (rv == -1) {
             munit_errorf("tcp: close(): %s", strerror(errno));
         }
     }
 
     if (t->client.socket != -1) {
-        rv = close(t->client.socket);
+        rv = sockClose(t->client.socket);
         if (rv == -1) {
             munit_errorf("tcp: close(): %s", strerror(errno));
         }
@@ -191,7 +208,7 @@ void test_tcp_close(struct test_tcp *t)
 {
     int rv;
 
-    rv = close(t->client.socket);
+    rv = sockClose(t->client.socket);
     if (rv == -1) {
         munit_errorf("tcp: close(): %s", strerror(errno));
     }
@@ -202,7 +219,7 @@ void test_tcp_stop(struct test_tcp *t)
 {
     int rv;
 
-    rv = close(t->server.socket);
+    rv = sockClose(t->server.socket);
     if (rv == -1) {
         munit_errorf("tcp: close(): %s", strerror(errno));
     }
@@ -213,7 +230,7 @@ void test_tcp_send(struct test_tcp *t, const void *buf, int len)
 {
     int rv;
 
-    rv = write(t->client.socket, buf, len);
+    rv = sockWrite(t->client.socket, buf, len);
     if (rv == -1) {
         munit_errorf("tcp: write(): %s", strerror(errno));
     }

@@ -2,14 +2,40 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/statvfs.h>
 #include <sys/types.h>
+#if defined(linux) || defined(__linux__)
 #include <unistd.h>
+#include <ftw.h>
+#include <sys/statvfs.h>
+#else
+#define S_IRUSR _S_IREAD
+#define S_IWUSR _S_IWRITE
+#include <windows.h>
+int ftruncate(int fh, int len) {
+    LARGE_INTEGER fp;
+    fp.QuadPart = len;
+    if (SetFilePointerEx(fh, fp, NULL, 0) == 0 ||
+        SetEndOfFile(fh) == 0) {
+        return -1;
+    }
+    return 0;
+}
+
+#include <io.h>
+char *mkdtemp(const char *input) {
+    char template_t[MAX_PATH];
+    sprintf(template_t, "%s", input);
+    char *new = _mktemp(template_t);
+    strcpy(input, new);
+    if (!CreateDirectory(new, 0)) return NULL;
+    return new;
+}
+
+#endif
 
 #define SEP "/"
 #define TEMPLATE "raft-test-XXXXXX"
@@ -119,14 +145,36 @@ static int dirRemoveFn(const char *path,
     return remove(path);
 }
 
+// todo: replace nftw with win32 shim
 static void dirRemove(char *dir)
 {
     int rv;
     rv = chmod(dir, 0755);
     munit_assert_int(rv, ==, 0);
 
+    // todo: won't clean up dirs on windows without a shim for this
+    #ifdef _WIN32
+    int len =
+        strlen(dir) +
+        2;  // required to set 2 nulls at end of argument to SHFileOperation.
+    char *tempdir = (char *)malloc(len);
+    memset(tempdir, 0, len);
+    strcpy(tempdir, dir);
+
+    SHFILEOPSTRUCT file_op = {NULL,
+                              FO_DELETE,
+                              tempdir,
+                              NULL,
+                              FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT,
+                              false,
+                              0,
+                              ""};
+    int ret = SHFileOperation(&file_op);
+    free(tempdir);  
+    #else
     rv = nftw(dir, dirRemoveFn, 10, FTW_DEPTH | FTW_MOUNT | FTW_PHYS);
     munit_assert_int(rv, ==, 0);
+    #endif
 }
 
 static bool dirExists(const char *dir)
@@ -163,6 +211,7 @@ static void joinPath(const char *dir, const char *filename, char *path)
     strcat(path, filename);
 }
 
+// todo: make a shared win32 shim for the flags O_RDWR, S_IRUSR | S_IWUSR
 void DirWriteFile(const char *dir,
                   const char *filename,
                   const void *buf,
@@ -362,10 +411,10 @@ bool DirHasFile(const char *dir, const char *filename)
     int fd;
 
     joinPath(dir, filename, path);
-
     fd = open(path, O_RDONLY);
     if (fd == -1) {
         munit_assert_true(errno == ENOENT || errno == EACCES);
+        printf("DirHasFile %s => false\n", path);
         return false;
     }
 
@@ -376,6 +425,7 @@ bool DirHasFile(const char *dir, const char *filename)
 
 void DirFill(const char *dir, const size_t n)
 {
+    #ifndef _WIN32
     char path[256];
     const char *filename = ".fill";
     struct statvfs fs;
@@ -420,4 +470,5 @@ void DirFill(const char *dir, const size_t n)
     }
 
     close(fd);
+    #endif
 }

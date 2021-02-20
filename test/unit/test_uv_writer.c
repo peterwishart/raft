@@ -5,6 +5,11 @@
 #include "../lib/loop.h"
 #include "../lib/runner.h"
 
+#ifdef _WIN32
+#define S_IRUSR _S_IREAD
+#define S_IWUSR _S_IWRITE
+#endif
+
 /******************************************************************************
  *
  * Fixture with a UvWriter and an open file ready for writing.
@@ -271,6 +276,9 @@ SUITE(UvWriterInit)
 /* The kernel has ran out of available AIO events. */
 TEST(UvWriterInit, noResources, setUpDeps, tearDownDeps, 0, NULL)
 {
+#ifdef _WIN32
+    return MUNIT_SKIP;
+#else
     struct fixture *f = data;
     aio_context_t ctx = 0;
     int rv;
@@ -281,6 +289,7 @@ TEST(UvWriterInit, noResources, setUpDeps, tearDownDeps, 0, NULL)
     INIT_ERROR(RAFT_TOOMANY, "AIO events user limit exceeded");
     AioDestroy(ctx);
     return MUNIT_OK;
+#endif
 }
 
 /******************************************************************************
@@ -373,6 +382,9 @@ TEST(UvWriterSubmit, concurrentSame, NULL, NULL, 0, DirAllParams)
  * write. */
 TEST(UvWriterSubmit, noResources, setUpDeps, tearDown, 0, DirNoAioParams)
 {
+    #ifdef _WIN32
+    return MUNIT_SKIP;
+    #else
     struct fixture *f = data;
     aio_context_t ctx = 0;
     int rv;
@@ -385,6 +397,7 @@ TEST(UvWriterSubmit, noResources, setUpDeps, tearDown, 0, DirNoAioParams)
     WRITE_FAILURE(1, 0, 0, RAFT_TOOMANY, "AIO events user limit exceeded");
     AioDestroy(ctx);
     return MUNIT_OK;
+    #endif
 }
 
 /******************************************************************************

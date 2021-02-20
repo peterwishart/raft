@@ -2,8 +2,20 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#if defined(linux) || defined(__linux__)
 #include <sys/vfs.h>
 #include <unistd.h>
+#else
+#include <io.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#define S_IRUSR _S_IREAD
+#define S_IWUSR _S_IWRITE
+#define lseek  _lseek
+/* TODO: fix */
+#define O_DSYNC 0
+#endif
 
 #include "assert.h"
 #include "err.h"
@@ -24,6 +36,7 @@ int UvFsCheckDir(const char *dir, char *errmsg)
                              dir);
                 return RAFT_NOTFOUND;
             case UV_EACCES:
+            case UV_EPERM:
                 ErrMsgPrintf((char *)errmsg, "can't access directory '%s'",
                              dir);
                 return RAFT_UNAUTHORIZED;
@@ -52,6 +65,8 @@ int UvFsCheckDir(const char *dir, char *errmsg)
 
 int UvFsSyncDir(const char *dir, char *errmsg)
 {
+    // todo: directory fsync isn't a thing on windows. does this mean only direct (writethrough) io will work?
+#ifndef  _WIN32
     uv_file fd;
     int rv;
     rv = UvOsOpen(dir, UV_FS_O_RDONLY | UV_FS_O_DIRECTORY, 0, &fd);
@@ -65,6 +80,7 @@ int UvFsSyncDir(const char *dir, char *errmsg)
         UvOsErrMsg(errmsg, "fsync directory", rv);
         return RAFT_IOERR;
     }
+#endif
     return 0;
 }
 
@@ -509,7 +525,9 @@ err:
 /* Check if direct I/O is possible on the given fd. */
 static int probeDirectIO(int fd, size_t *size, char *errmsg)
 {
+#ifndef _WIN32
     struct statfs fs_info; /* To check the file system type. */
+#endif
     void *buf;             /* Buffer to use for the probe write. */
     int rv;
 
@@ -520,6 +538,7 @@ static int probeDirectIO(int fd, size_t *size, char *errmsg)
             UvOsErrMsg(errmsg, "fnctl", rv);
             return RAFT_IOERR;
         }
+#ifndef _WIN32
         rv = fstatfs(fd, &fs_info);
         if (rv == -1) {
             /* UNTESTED: in practice ENOMEM should be the only failure mode */
@@ -543,6 +562,7 @@ static int probeDirectIO(int fd, size_t *size, char *errmsg)
 #endif
                 return RAFT_IOERR;
         }
+#endif
     }
 
     /* Try to perform direct I/O, using various buffer size. */

@@ -2,14 +2,18 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
 #include <stdio.h>
 #include <string.h>
+#if defined(linux) || defined(__linux__)
+#include <libgen.h>
 #include <sys/eventfd.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <sys/vfs.h>
 #include <unistd.h>
+#else
+#include <io.h>
+#endif
 #include <uv.h>
 
 #include "assert.h"
@@ -40,6 +44,7 @@ int UvOsClose(uv_file fd)
 /* Emulate fallocate(). Mostly taken from glibc's implementation. */
 static int uvOsFallocateEmulation(int fd, off_t offset, off_t len)
 {
+#ifndef _MSC_VER
     ssize_t increment;
     struct statfs f;
     int rv;
@@ -63,12 +68,23 @@ static int uvOsFallocateEmulation(int fd, off_t offset, off_t len)
         if (rv != 1)
             return errno;
     }
-
+#endif
     return 0;
 }
 
 int UvOsFallocate(uv_file fd, off_t offset, off_t len)
 {
+#ifdef _WIN32
+    LARGE_INTEGER li;
+    HANDLE fh = (HANDLE)_get_osfhandle(fd);
+    li.QuadPart = (LONGLONG)offset + len;
+    if(!SetFilePointerEx(fh, li, NULL, FILE_BEGIN)) {
+        return GetLastError();
+    }
+    if(!SetEndOfFile(fh)) {
+        return GetLastError();
+    }
+#else
     int rv;
     rv = posix_fallocate(fd, offset, len);
     if (rv != 0) {
@@ -88,6 +104,7 @@ int UvOsFallocate(uv_file fd, off_t offset, off_t len)
             return -EOPNOTSUPP;
         }
     }
+#endif
     return 0;
 }
 
@@ -139,7 +156,17 @@ int UvOsUnlink(const char *path)
 int UvOsRename(const char *path1, const char *path2)
 {
     struct uv_fs_s req;
+#ifdef _WIN32
+    // todo: instead of relying on folder fsync, ensure rename is written to disk synchronously
+    if (MoveFileEx(path1, path2,
+                   MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        return 0;
+    }    
+    // MoveFileEx failed, fallback to posix type rename in case of errors
     return uv_fs_rename(NULL, &req, path1, path2, NULL);
+#else
+    return uv_fs_rename(NULL, &req, path1, path2, NULL);    
+#endif
 }
 
 void UvOsJoin(const char *dir, const char *filename, char *path)
@@ -151,44 +178,56 @@ void UvOsJoin(const char *dir, const char *filename, char *path)
     strcat(path, filename);
 }
 
-int UvOsIoSetup(unsigned nr, aio_context_t *ctxp)
+int UvOsIoSetup(unsigned nr, uv_aio_ctx *ctxp)
 {
     int rv;
+#ifdef _MSC_VER
+#else
     rv = io_setup(nr, ctxp);
     if (rv == -1) {
         return -errno;
     }
+#endif
     return 0;
 }
 
-int UvOsIoDestroy(aio_context_t ctx)
+int UvOsIoDestroy(uv_aio_ctx ctx)
 {
     int rv;
+#ifdef _MSC_VER
+#else
     rv = io_destroy(ctx);
     if (rv == -1) {
         return -errno;
     }
+#endif
     return 0;
 }
 
-int UvOsIoSubmit(aio_context_t ctx, long nr, struct iocb **iocbpp)
+int UvOsIoSubmit(uv_aio_ctx ctx, long nr, uv_iocb **iocbpp)
 {
     int rv;
+#ifdef _MSC_VER
+#else
     rv = io_submit(ctx, nr, iocbpp);
     if (rv == -1) {
         return -errno;
     }
     assert(rv == nr); /* TODO: can something else be returned? */
+#endif
     return 0;
 }
 
-int UvOsIoGetevents(aio_context_t ctx,
+int UvOsIoGetevents(uv_aio_ctx ctx,
                     long min_nr,
                     long max_nr,
-                    struct io_event *events,
+                    uv_io_event *events,
                     struct timespec *timeout)
 {
     int rv;
+#ifdef _MSC_VER
+    rv = 0;
+#else
     do {
         rv = io_getevents(ctx, min_nr, max_nr, events, timeout);
     } while (rv == -1 && errno == EINTR);
@@ -198,12 +237,19 @@ int UvOsIoGetevents(aio_context_t ctx,
     }
     assert(rv >= min_nr);
     assert(rv <= max_nr);
+#endif
     return rv;
 }
 
 int UvOsEventfd(unsigned int initval, int flags)
 {
     int rv;
+#ifdef _MSC_VER
+    rv = CreateEvent(0, TRUE, initval, "asdftodo");
+    if (rv == INVALID_HANDLE_VALUE) {
+        return -errno;
+    }
+#else
     /* At the moment only UV_FS_O_NONBLOCK is supported */
     assert(flags == UV_FS_O_NONBLOCK);
     flags = EFD_NONBLOCK | EFD_CLOEXEC;
@@ -211,11 +257,13 @@ int UvOsEventfd(unsigned int initval, int flags)
     if (rv == -1) {
         return -errno;
     }
+#endif
     return rv;
 }
 
 int UvOsSetDirectIo(uv_file fd)
 {
+#ifndef _MSC_VER
     int flags; /* Current fcntl flags */
     int rv;
     flags = fcntl(fd, F_GETFL);
@@ -223,5 +271,6 @@ int UvOsSetDirectIo(uv_file fd)
     if (rv == -1) {
         return -errno;
     }
+#endif
     return 0;
 }

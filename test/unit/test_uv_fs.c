@@ -55,6 +55,17 @@ TEST(UvFsCheckDir, doesNotExist, DirSetUp, DirTearDown, 0, NULL)
 /* If the process can't access the directory, an error is returned. */
 TEST(UvFsCheckDir, permissionDenied, NULL, NULL, 0, NULL)
 {
+    #ifdef _WIN32
+    // todo: this will fail if run as admin, pass if run as standard user
+    bool has_access = DirHasFile("/Program Files/", "WindowsApps");
+    /* Skip the test if the process actually has access to /proc/1/root. */
+    if (has_access) {
+        return MUNIT_SKIP;
+    }
+    CHECK_DIR_ERROR("/Program Files/WindowsApps", RAFT_UNAUTHORIZED,
+                    "can't access directory '/Program Files/WindowsApps'");
+    return MUNIT_OK;
+    #else
     bool has_access = DirHasFile("/proc/1", "root");
     /* Skip the test is the process actually has access to /proc/1/root. */
     if (has_access) {
@@ -63,21 +74,35 @@ TEST(UvFsCheckDir, permissionDenied, NULL, NULL, 0, NULL)
     CHECK_DIR_ERROR("/proc/1/root", RAFT_UNAUTHORIZED,
                     "can't access directory '/proc/1/root'");
     return MUNIT_OK;
+    #endif
 }
 
 /* If the given path contains a non-directory prefix, an error is returned. */
 TEST(UvFsCheckDir, notDirPrefix, NULL, NULL, 0, NULL)
 {
-    CHECK_DIR_ERROR("/dev/null/foo", RAFT_INVALID,
-                    "path '/dev/null/foo' is not a directory");
+#ifdef _WIN32
+    char checkFile[] = "/bootmgr/foo";
+    char expectedMessage[] = "directory '/bootmgr/foo' does not exist";
+    CHECK_DIR_ERROR(checkFile, RAFT_NOTFOUND, expectedMessage);
+#else
+    char *checkFile = "/dev/null/foo";
+    char expectedMessage = "path '/dev/null' is not a directory";
+    CHECK_DIR_ERROR(checkFile, RAFT_INVALID, expectedMessage);
+#endif
     return MUNIT_OK;
 }
 
 /* If the given path is not a directory, an error is returned. */
 TEST(UvFsCheckDir, notDir, NULL, NULL, 0, NULL)
 {
-    CHECK_DIR_ERROR("/dev/null", RAFT_INVALID,
-                    "path '/dev/null' is not a directory");
+#ifdef _WIN32
+    char checkFile[] = "/bootmgr";
+    char expectedMessage[] = "path '/bootmgr' is not a directory";
+#else
+    char *checkFile = "/dev/null";
+    char expectedMessage = "path '/dev/null' is not a directory";
+#endif
+    CHECK_DIR_ERROR(checkFile, RAFT_INVALID, expectedMessage);
     return MUNIT_OK;
 }
 
@@ -111,6 +136,9 @@ SUITE(UvFsSyncDir)
 /* If the directory doesn't exist, an error is returned. */
 TEST(UvFsSyncDir, noExists, NULL, NULL, 0, NULL)
 {
+#ifdef _WIN32
+    return MUNIT_SKIP;
+#endif
     SYNC_DIR_ERROR("/abcdef", RAFT_IOERR,
                    "open directory: no such file or directory");
     return MUNIT_OK;
@@ -315,6 +343,10 @@ TEST(UvFsProbeCapabilities, aio, DirSetUp, DirTearDown, 0, DirAioParams)
  * system can't be determined and an error is returned. */
 TEST(UvFsProbeCapabilities, noAccess, DirSetUp, DirTearDown, 0, NULL)
 {
+#ifdef _WIN32
+    // Windows doesn't support executable/unexecutable status for files
+    return MUNIT_SKIP;
+#endif
     const char *dir = data;
     DirMakeUnexecutable(dir);
     PROBE_CAPABILITIES_ERROR(

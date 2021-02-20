@@ -484,6 +484,7 @@ TEST(append, noSpaceResolved, setUp, tearDownDeps, 0, DirTmpfsParams)
     return MUNIT_OK;
 }
 
+#ifndef _WIN32
 /* An error occurs while performing a write. */
 TEST(append, writeError, setUp, tearDown, 0, NULL)
 {
@@ -500,6 +501,7 @@ TEST(append, writeError, setUp, tearDown, 0, NULL)
     AioDestroy(ctx);
     return MUNIT_OK;
 }
+#endif
 
 static char *oomHeapFaultDelay[] = {"1", /* FIXME "2", */ NULL};
 static char *oomHeapFaultRepeat[] = {"1", NULL};
@@ -575,7 +577,8 @@ TEST(append, currentSegment, setUp, tearDownDeps, 0, NULL)
     return MUNIT_OK;
 }
 
-/* The kernel has ran out of available AIO events. */
+#ifndef _WIN32
+    /* The kernel has ran out of available AIO events. */
 TEST(append, ioSetupError, setUp, tearDown, 0, NULL)
 {
     struct fixture *f = data;
@@ -682,3 +685,4 @@ TEST(append, barrierNoOpenSegments, setUp, tearDown, 0, NULL)
     APPEND_WAIT(2);
     return MUNIT_OK;
 }
+#endif

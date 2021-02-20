@@ -4,7 +4,7 @@ set(VERSION 0.7.0)
 project(raft VERSION ${VERSION})
 
 option(FIXTURE_ENABLED "enable test fixture" On)
-option(UV_ENABLED "enable libuv" Off)
+option(UV_ENABLED "enable libuv" On)
 option(EXAMPLE_ENABLED "enable example server" On)
 option(BENCHMARK_ENABLED "enable benchmark test" On)
 option(DEBUG_ENABLED "enable debug" On)

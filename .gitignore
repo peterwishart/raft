@@ -38,3 +38,5 @@ benchmark/os-disk-write
 tmp
 conftest*
 doc/build
+/.vs
+/out

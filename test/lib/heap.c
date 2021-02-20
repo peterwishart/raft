@@ -83,7 +83,7 @@ static void *heapAlignedAlloc(void *data, size_t alignment, size_t size)
     h->n++;
 
 #ifdef _WIN32
-    p = _aligned_malloc(alignment, size);
+    p = _aligned_malloc(size, alignment);
 #else
     p = aligned_alloc(alignment, size);
 #endif
