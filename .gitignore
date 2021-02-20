@@ -40,3 +40,4 @@ conftest*
 doc/build
 /.vs
 /out
+/CMakeSettings.json
